@@ -1,92 +1,112 @@
-/**
- * PROJETO: Arena-Connect v1.0
- * MISSÃO 1: The Memory Matrix
- * OBJETIVO: CRUD de turmas em memória RAM usando Funções e prompt-sync
- */
-const prompt = require('prompt-sync')({ sigint: true });
+const prompt = require('prompt-sync')();
 
-// 1. Matriz de Dados (Persistência em memória)
-let turmas = [];
-let idContador = 1; // Gerador de ID automático
-let resp = 0;
-
-// 2. Sub-rotinas (Funções do Motor Backend)
-
-function adicionarTurma(nome) {
-    const novaTurma = {
-        id: idContador++,
-        nome: nome.toUpperCase() // Padronização (Clean Code)
-    };
-    turmas.push(novaTurma);
-    console.log(`[LOG] Turma "${nome}" registrada com sucesso! ID: ${novaTurma.id}`);
-}
-
-function listarTurmas() {
-    console.log("\n=== LISTA DE TURMAS - INTERCLASSES ===");
-    if (turmas.length === 0) {
-        console.log("A matriz de dados está vazia.");
-        console.log("======================================\n");
-        return;
+// 1. Modelos de Dados
+class Turma {
+    constructor(id, nome) {
+        this.id = id;
+        this.nome = nome.toUpperCase();
     }
-
-    turmas.forEach(turma => {
-        console.log(`ID: ${turma.id} | Sala: ${turma.nome}`);
-    });
-    console.log("======================================\n");
-}
-
-function atualizarTurma(id, novoNome) {
-    const turma = turmas.find(t => t.id === id);
-    if (turma) {
-        turma.nome = novoNome.toUpperCase();
-        console.log(`[LOG] Turma ID ${id} atualizada para "${turma.nome}".`);
-    } else {
-        console.log(`[ERRO] ID ${id} não encontrado para atualização.`);
+    exibir() {
+        console.log(`ID: ${this.id} | Sala: ${this.nome}`);
     }
 }
 
-function removerTurma(id) {
-    const totalAntes = turmas.length;
-    turmas = turmas.filter(t => t.id !== id);
-    
-    if (turmas.length < totalAntes) {
-        console.log(`[LOG] Turma ID ${id} removida da matriz.`);
-    } else {
-        console.log(`[ERRO] ID ${id} não encontrado.`);
+class Atleta {
+    constructor(id, nome, idTurma) {
+        this.id = id;
+        this.nome = nome;
+        this.idTurma = idTurma;
+    }
+    exibir(nomeTurma) {
+        console.log(`ID: ${this.id} | Atleta: ${this.nome} | Turma: ${nomeTurma}`);
     }
 }
 
-console.log("Iniciando Arena-Connect Engine...");
+// 2. A Classe Gerenciadora (Onde as funções viram métodos)
+class ArenaConnect {
+    constructor() {
+        this.turmas = [];
+        this.atletas = [];
+        this.idTurmaContador = 1;
+        this.idAtletaContador = 1;
+    }
 
-while (true) {
-    console.log("\n--- MENU ---");
-    console.log("1. Adicionar Turma");
-    console.log("2. Listar Turmas");
-    console.log("3. Atualizar Turma");
-    console.log("4. Remover Turma");
-    console.log("5. Sair");
-    
-    // O prompt retorna string, convertemos para número com Number() ou parseInt()
-    resp = Number(prompt("Digite a opção escolhida: "));
+    adicionarTurma() {
+        const nome = prompt("Nome da nova turma: ");
+        const novaTurma = new Turma(this.idTurmaContador++, nome);
+        this.turmas.push(novaTurma);
+        console.log("✔ Turma registrada com sucesso!");
+    }
 
-    if (resp === 1) {
-        const nome = prompt("Digite o nome da turma: ");
-        adicionarTurma(nome);
-    } else if (resp === 2) {
-        listarTurmas();
-    } else if (resp === 3) {
-        listarTurmas();
-        const idAtualizar = Number(prompt("Digite o ID da turma que deseja atualizar: "));
-        const novoNome = prompt("Digite o novo nome da turma: ");
-        atualizarTurma(idAtualizar, novoNome);
-    } else if (resp === 4) {
-        listarTurmas();
-        const idRemover = Number(prompt("Digite o ID da turma que deseja remover: "));
-        removerTurma(idRemover);
-    } else if (resp === 5) {
-        console.log("Saindo do Arena-Connect... Até logo!");
-        break;
-    } else {
-        console.log("[ERRO] Opção inválida! Escolha um número de 1 a 5.");
+    listarTurmas() {
+        console.log("\n=== LISTA DE TURMAS ===");
+        if (this.turmas.length === 0) return console.log("Nenhuma turma no sistema.");
+        this.turmas.forEach(t => t.exibir());
+    }
+
+    editarTurma() {
+        this.listarTurmas();
+        const id = parseInt(prompt("ID da turma para editar: "));
+        const turma = this.turmas.find(t => t.id === id);
+        if (turma) {
+            const novoNome = prompt(`Novo nome para ${turma.nome}: `);
+            turma.nome = novoNome.toUpperCase();
+            console.log("✔ Dados atualizados!");
+        } else {
+            console.log("✖ Erro: ID não encontrado.");
+        }
+    }
+
+    removerTurma() {
+        this.listarTurmas();
+        const id = parseInt(prompt("ID da turma para remover: "));
+        const totalAntes = this.turmas.length;
+        this.turmas = this.turmas.filter(t => t.id !== id);
+        if (this.turmas.length < totalAntes) {
+            console.log("✔ Turma removida.");
+        } else {
+            console.log("✖ Erro: ID não encontrado.");
+        }
+    }
+
+    adicionarAtleta() {
+        this.listarTurmas();
+        const idT = parseInt(prompt("ID da Turma do atleta: "));
+        const turmaExiste = this.turmas.find(t => t.id === idT);
+        if (!turmaExiste) return console.log("✖ Erro: Turma inválida!");
+        
+        const nome = prompt("Nome do Atleta: ");
+        const novoAtleta = new Atleta(this.idAtletaContador++, nome, idT);
+        this.atletas.push(novoAtleta);
+        console.log(`✔ Atleta "${nome}" vinculado ao ${turmaExiste.nome}!`);
     }
 }
+
+// 3. Menu Principal (Execução)
+function main() {
+    const sistema = new ArenaConnect(); // Instancia o sistema orientado a objetos
+
+    while (true) {
+        console.log(`
+ ==============================
+ ARENA-CONNECT v2.0 - PBE1
+ ==============================
+ 1. Registrar Turma
+ 2. Listar Turmas
+ 3. Editar Turma
+ 4. Remover Turma
+ 5. Registrar Atleta
+ 0. Sair
+ ==============================`);
+        let op = prompt("Escolha: ");
+        if (op === '1') sistema.adicionarTurma();
+        else if (op === '2') sistema.listarTurmas();
+        else if (op === '3') sistema.editarTurma();
+        else if (op === '4') sistema.removerTurma();
+        else if (op === '5') sistema.adicionarAtleta();
+        else if (op === '0') break;
+        else console.log("Opção inválida!");
+    }
+}
+
+main();
