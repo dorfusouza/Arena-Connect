@@ -1,1 +1,42 @@
+# Dependencies
 /node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage
+coverage
+*.lcov
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+/dist
+/build
+out/
+
+# Misc
+npm-offline-packages/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnpm-store
