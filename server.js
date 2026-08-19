@@ -2,23 +2,134 @@ const prompt = require('prompt-sync')();
 
 // 1. Modelos de Dados
 class Turma {
+    #nome;
+    #id;
     constructor(id, nome) {
-        this.id = id;
-        this.nome = nome.toUpperCase();
+        this.#id = id;
+        this.#nome = nome.toUpperCase();
     }
+
+    set nome(novoNome){
+        if (!novoNome || novoNome.length < 3){
+            console.log("[ERRO] - Nome Inválido!")
+            return;
+        }        
+        this.#nome = novoNome;
+    }
+
+    get nome() { return this.#nome; };
+
+    get id() { return this.#id; };
+
     exibir() {
         console.log(`ID: ${this.id} | Sala: ${this.nome}`);
     }
 }
 
 class Atleta {
+    #id;
+    #nome;
+    #idTurma;
+
     constructor(id, nome, idTurma) {
-        this.id = id;
-        this.nome = nome;
-        this.idTurma = idTurma;
+        this.#id = id;
+        this.#nome = nome;
+        this.#idTurma = idTurma;
     }
+
+    set nome(novoNome) {
+        if (!novoNome || novoNome.length < 3){
+            console.log("[ERRO] - Nome Inválido!")
+            return;
+        }        
+        this.#nome = novoNome;
+    }
+
+    get nome() { return this.#nome; };
+    
+    set idTurma(novoIdTurma) {
+        if (
+            novoIdTurma === null ||
+            novoIdTurma === undefined ||
+            novoIdTurma === '' ||
+            !Number.isInteger(novoIdTurma) ||
+            novoIdTurma <= 0
+        ) {
+            console.log("[ERRO] - ID de Turma inválido!");
+            return;
+        }
+        this.#idTurma = novoIdTurma;
+    }
+
+    get idTurma() { return this.#idTurma }
+        
+    get id() { return this.#id; };
+    
     exibir(nomeTurma) {
         console.log(`ID: ${this.id} | Atleta: ${this.nome} | Turma: ${nomeTurma}`);
+    }
+}
+
+class Arbitro {
+    #id;
+    #nome;
+    #numeroCredencial;
+    #anosExperiencia;
+
+    constructor(id, nome, numeroCredencial, anosExperiencia) {
+        this.#id = id;
+        this.nome = nome;
+        this.numeroCredencial = numeroCredencial;
+        this.anosExperiencia = anosExperiencia;
+    }
+
+    get id() { return this.#id; };
+
+    set nome(novoNome) {
+        if (!novoNome || novoNome.length < 3){
+            console.log("[ERRO] - Nome Inválido!")
+            return;
+        }
+        this.#nome = novoNome;
+    }
+
+    get nome() { return this.#nome; };
+
+    set numeroCredencial(novoNumero) {
+        if (
+            novoNumero === null ||
+            novoNumero === undefined ||
+            novoNumero === '' ||
+            !Number.isInteger(novoNumero) ||
+            novoNumero <= 0
+        ) {
+            console.log("[ERRO] - Número de Credencial inválido!");
+            return;
+        }
+        this.#numeroCredencial = novoNumero;
+    }
+
+    get numeroCredencial() { return this.#numeroCredencial; };
+
+    set anosExperiencia(anos) {
+        // Atenção: "< 0" aqui, não "<= 0" — senão um árbitro novato (0 anos) nunca passa.
+        if (
+            anos === null ||
+            anos === undefined ||
+            anos === '' ||
+            !Number.isInteger(anos) ||
+            anos < 0
+        ) {
+            console.log("[ERRO] - Anos de Experiência inválido!");
+            return;
+        }
+        this.#anosExperiencia = anos;
+    }
+
+    get anosExperiencia() { return this.#anosExperiencia; };
+
+    exibir() {
+        console.log(`ID: ${this.id} | Árbitro: ${this.nome} | Credencial: ${this.numeroCredencial} | Experiência: ${this.anosExperiencia} ano(s)`);
     }
 }
 
@@ -27,8 +138,10 @@ class ArenaConnect {
     constructor() {
         this.turmas = [];
         this.atletas = [];
+        this.arbitros = [];
         this.idTurmaContador = 1;
         this.idAtletaContador = 1;
+        this.idArbitroContador = 1;
     }
 
     adicionarTurma() {
@@ -80,6 +193,26 @@ class ArenaConnect {
         this.atletas.push(novoAtleta);
         console.log(`✔ Atleta "${nome}" vinculado ao ${turmaExiste.nome}!`);
     }
+
+    adicionarArbitro() {
+        const nome = prompt("Nome do Árbitro: ");
+        const numeroCredencial = parseInt(prompt("Número de Credencial: "));
+        const anosExperiencia = parseInt(prompt("Anos de Experiência: "));
+        const novoArbitro = new Arbitro(this.idArbitroContador++, nome, numeroCredencial, anosExperiencia);
+
+        if (!novoArbitro.nome || novoArbitro.numeroCredencial === undefined || novoArbitro.anosExperiencia === undefined) {
+            console.log("✖ Árbitro não registrado: dados inválidos.");
+            return;
+        }
+        this.arbitros.push(novoArbitro);
+        console.log("✔ Árbitro registrado com sucesso!");
+    }
+
+    listarArbitros() {
+        console.log("\n=== LISTA DE ÁRBITROS ===");
+        if (this.arbitros.length === 0) return console.log("Nenhum árbitro no sistema.");
+        this.arbitros.forEach(a => a.exibir());
+    }
 }
 
 // 3. Menu Principal (Execução)
@@ -96,6 +229,8 @@ function main() {
  3. Editar Turma
  4. Remover Turma
  5. Registrar Atleta
+ 6. Registrar Árbitro
+ 7. Listar Árbitros
  0. Sair
  ==============================`);
         let op = prompt("Escolha: ");
@@ -104,6 +239,8 @@ function main() {
         else if (op === '3') sistema.editarTurma();
         else if (op === '4') sistema.removerTurma();
         else if (op === '5') sistema.adicionarAtleta();
+        else if (op === '6') sistema.adicionarArbitro();
+        else if (op === '7') sistema.listarArbitros();
         else if (op === '0') break;
         else console.log("Opção inválida!");
     }
