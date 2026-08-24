@@ -1,53 +1,67 @@
+/**
+ * ARENA-CONNECT — AULA 02: HERANÇA E ABSTRAÇÃO
+ * Gabarito da aula de Herança (Aula 02 — 24/08/2026)
+ *
+ * O que muda em relação à Aula 01:
+ *  - Nova classe `Pessoa`: superclasse que concentra id e nome (encapsulados,
+ *    privados), um método `exibir()` genérico, e `super()` no construtor.
+ *  - `Atleta extends Pessoa`: herda id/nome de Pessoa, adiciona #idTurma
+ *    e sobrescreve `exibir()` com informações específicas de turma/modalidade.
+ *  - `Arbitro extends Pessoa`: herda id/nome de Pessoa, adiciona
+ *    #numeroCredencial e #anosExperiencia, sobrescreve `exibir()`.
+ *  - ArenaConnect e o menu permanecem inalterados em interface pública —
+ *    mais um exemplo de como a herança é um detalhe interno, não quebra
+ *    quem já usa as classes por fora.
+ */
 const prompt = require('prompt-sync')();
 
-// 1. Modelos de Dados
-class Turma {
-    #nome;
-    #id;
+// 1. Superclasse — o que Atleta e Arbitro têm em comum
+
+class Pessoa {
+    #id;   // Identidade imutável — só getter, sem setter
+    #nome; // Escudo ativado — validação no setter
+
     constructor(id, nome) {
         this.#id = id;
-        this.#nome = nome.toUpperCase();
+        this.nome = nome; // aciona o setter de validação
     }
 
-    set nome(novoNome){
-        if (!novoNome || novoNome.length < 3){
-            console.log("[ERRO] - Nome Inválido!")
-            return;
-        }        
-        this.#nome = novoNome;
-    }
-
-    get nome() { return this.#nome; };
-
-    get id() { return this.#id; };
-
-    exibir() {
-        console.log(`ID: ${this.id} | Sala: ${this.nome}`);
-    }
-}
-
-class Atleta {
-    #id;
-    #nome;
-    #idTurma;
-
-    constructor(id, nome, idTurma) {
-        this.#id = id;
-        this.#nome = nome;
-        this.#idTurma = idTurma;
+    get id() {
+        return this.#id;
     }
 
     set nome(novoNome) {
-        if (!novoNome || novoNome.length < 3){
-            console.log("[ERRO] - Nome Inválido!")
+        // Mínimo 3 caracteres — regra genérica para qualquer Pessoa.
+        if (!novoNome || novoNome.length < 3) {
+            console.log('[ERRO] Nome de pessoa inválido. Acesso negado.');
             return;
-        }        
+        }
         this.#nome = novoNome;
     }
 
-    get nome() { return this.#nome; };
-    
+    get nome() {
+        return this.#nome;
+    }
+
+    // Método genérico — sobrescrito pelas subclasses com informações específicas
+    exibir() {
+        console.log(`ID: ${this.id} | Pessoa: ${this.nome}`);
+    }
+}
+
+// 2. Subclasses — especializam Pessoa com dados e comportamentos próprios
+
+class Atleta extends Pessoa {
+    #idTurma; // Específico de Atleta
+
+    constructor(id, nome, idTurma) {
+        super(id, nome); // Chama o construtor de Pessoa — obrigatório
+        this.idTurma = idTurma; // aciona o setter de validação
+    }
+
     set idTurma(novoIdTurma) {
+        // Firewall: bloqueia vazio/nulo/undefined e qualquer coisa que não
+        // seja um número inteiro positivo.
         if (
             novoIdTurma === null ||
             novoIdTurma === undefined ||
@@ -55,45 +69,32 @@ class Atleta {
             !Number.isInteger(novoIdTurma) ||
             novoIdTurma <= 0
         ) {
-            console.log("[ERRO] - ID de Turma inválido!");
+            console.log('[ERRO] ID de turma inválido. Acesso negado.');
             return;
         }
         this.#idTurma = novoIdTurma;
     }
 
-    get idTurma() { return this.#idTurma }
-        
-    get id() { return this.#id; };
-    
+    get idTurma() {
+        return this.#idTurma;
+    }
+
+    // Sobrescrita (override) — mesmo método de Pessoa, mas com informação específica
     exibir(nomeTurma) {
-        console.log(`ID: ${this.id} | Atleta: ${this.nome} | Turma: ${nomeTurma}`);
+        super.exibir();
+        console.log(`Turma: ${nomeTurma}`);
     }
 }
 
-class Arbitro {
-    #id;
-    #nome;
+class Arbitro extends Pessoa {
     #numeroCredencial;
     #anosExperiencia;
 
     constructor(id, nome, numeroCredencial, anosExperiencia) {
-        this.#id = id;
-        this.nome = nome;
+        super(id, nome); // Chama o construtor de Pessoa
         this.numeroCredencial = numeroCredencial;
         this.anosExperiencia = anosExperiencia;
     }
-
-    get id() { return this.#id; };
-
-    set nome(novoNome) {
-        if (!novoNome || novoNome.length < 3){
-            console.log("[ERRO] - Nome Inválido!")
-            return;
-        }
-        this.#nome = novoNome;
-    }
-
-    get nome() { return this.#nome; };
 
     set numeroCredencial(novoNumero) {
         if (
@@ -103,16 +104,18 @@ class Arbitro {
             !Number.isInteger(novoNumero) ||
             novoNumero <= 0
         ) {
-            console.log("[ERRO] - Número de Credencial inválido!");
+            console.log('[ERRO] Número de credencial inválido. Acesso negado.');
             return;
         }
         this.#numeroCredencial = novoNumero;
     }
 
-    get numeroCredencial() { return this.#numeroCredencial; };
+    get numeroCredencial() {
+        return this.#numeroCredencial;
+    }
 
     set anosExperiencia(anos) {
-        // Atenção: "< 0" aqui, não "<= 0" — senão um árbitro novato (0 anos) nunca passa.
+        // "< 0" e não "<= 0": um árbitro novato tem 0 anos de experiência.
         if (
             anos === null ||
             anos === undefined ||
@@ -120,20 +123,23 @@ class Arbitro {
             !Number.isInteger(anos) ||
             anos < 0
         ) {
-            console.log("[ERRO] - Anos de Experiência inválido!");
+            console.log('[ERRO] Anos de experiência inválido. Acesso negado.');
             return;
         }
         this.#anosExperiencia = anos;
     }
 
-    get anosExperiencia() { return this.#anosExperiencia; };
+    get anosExperiencia() {
+        return this.#anosExperiencia;
+    }
 
+    // Sobrescrita — informações específicas de árbitro
     exibir() {
         console.log(`ID: ${this.id} | Árbitro: ${this.nome} | Credencial: ${this.numeroCredencial} | Experiência: ${this.anosExperiencia} ano(s)`);
     }
 }
 
-// 2. A Classe Gerenciadora (Onde as funções viram métodos)
+// 3. A Classe Gerenciadora (inalterada na interface pública)
 class ArenaConnect {
     constructor() {
         this.turmas = [];
@@ -162,9 +168,14 @@ class ArenaConnect {
         const id = parseInt(prompt("ID da turma para editar: "));
         const turma = this.turmas.find(t => t.id === id);
         if (turma) {
+            const nomeAntes = turma.nome;
             const novoNome = prompt(`Novo nome para ${turma.nome}: `);
             turma.nome = novoNome.toUpperCase();
-            console.log("✔ Dados atualizados!");
+            if (turma.nome !== nomeAntes) {
+                console.log("✔ Dados atualizados!");
+            } else {
+                console.log(`✖ Nome mantido (${nomeAntes}) — valor informado inválido.`);
+            }
         } else {
             console.log("✖ Erro: ID não encontrado.");
         }
@@ -187,11 +198,24 @@ class ArenaConnect {
         const idT = parseInt(prompt("ID da Turma do atleta: "));
         const turmaExiste = this.turmas.find(t => t.id === idT);
         if (!turmaExiste) return console.log("✖ Erro: Turma inválida!");
-        
+
         const nome = prompt("Nome do Atleta: ");
         const novoAtleta = new Atleta(this.idAtletaContador++, nome, idT);
+        if (!novoAtleta.nome) {
+            console.log("✖ Atleta não registrado: nome inválido.");
+            return;
+        }
         this.atletas.push(novoAtleta);
-        console.log(`✔ Atleta "${nome}" vinculado ao ${turmaExiste.nome}!`);
+        console.log(`✔ Atleta "${novoAtleta.nome}" vinculado ao ${turmaExiste.nome}!`);
+    }
+
+    listarAtletas() {
+        console.log("\n=== LISTA DE ATLETAS ===");
+        if (this.atletas.length === 0) return console.log("Nenhum atleta no sistema.");
+        this.atletas.forEach(a => {
+            const turma = this.turmas.find(t => t.id === a.idTurma);
+            a.exibir(turma ? turma.nome : "TURMA NÃO ENCONTRADA");
+        });
     }
 
     adicionarArbitro() {
@@ -213,24 +237,64 @@ class ArenaConnect {
         if (this.arbitros.length === 0) return console.log("Nenhum árbitro no sistema.");
         this.arbitros.forEach(a => a.exibir());
     }
+
+    listarTodas() {
+        console.log("\n=== TODAS AS PESSOAS (Polimorfismo) ===");
+        const pessoas = [...this.atletas, ...this.arbitros];
+        if (pessoas.length === 0) return console.log("Nenhuma pessoa (além de turmas) no sistema.");
+        pessoas.forEach(p => p.exibir());
+    }
 }
 
-// 3. Menu Principal (Execução)
+// Turma não herda de Pessoa (não é uma pessoa, é um agrupamento)
+class Turma {
+    #id;
+    #nome;
+
+    constructor(id, nome) {
+        this.#id = id;
+        this.nome = nome;
+    }
+
+    get id() {
+        return this.#id;
+    }
+
+    set nome(novoNome) {
+        if (!novoNome || novoNome.length < 2) {
+            console.log('[ERRO] Nome de turma inválido. Acesso negado.');
+            return;
+        }
+        this.#nome = novoNome.toUpperCase();
+    }
+
+    get nome() {
+        return this.#nome;
+    }
+
+    exibir() {
+        console.log(`ID: ${this.id} | Sala: ${this.nome}`);
+    }
+}
+
+// 4. Menu Principal
 function main() {
-    const sistema = new ArenaConnect(); // Instancia o sistema orientado a objetos
+    const sistema = new ArenaConnect();
 
     while (true) {
         console.log(`
  ==============================
- ARENA-CONNECT v2.0 - PBE1
+ ARENA-CONNECT v2.4 - PBE1 - Aula 02: Herança
  ==============================
  1. Registrar Turma
  2. Listar Turmas
  3. Editar Turma
  4. Remover Turma
  5. Registrar Atleta
- 6. Registrar Árbitro
- 7. Listar Árbitros
+ 6. Listar Atletas
+ 7. Registrar Árbitro
+ 8. Listar Árbitros
+ 9. Listar TODAS as Pessoas (teste de polimorfismo)
  0. Sair
  ==============================`);
         let op = prompt("Escolha: ");
@@ -239,11 +303,17 @@ function main() {
         else if (op === '3') sistema.editarTurma();
         else if (op === '4') sistema.removerTurma();
         else if (op === '5') sistema.adicionarAtleta();
-        else if (op === '6') sistema.adicionarArbitro();
-        else if (op === '7') sistema.listarArbitros();
+        else if (op === '6') sistema.listarAtletas();
+        else if (op === '7') sistema.adicionarArbitro();
+        else if (op === '8') sistema.listarArbitros();
+        else if (op === '9') sistema.listarTodas();
         else if (op === '0') break;
         else console.log("Opção inválida!");
     }
 }
 
-main();
+if (require.main === module) {
+    main();
+}
+
+module.exports = { Pessoa, Atleta, Arbitro, ArenaConnect, Turma };
