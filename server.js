@@ -1,29 +1,42 @@
 /**
- * ARENA-CONNECT — AULA 02: HERANÇA E ABSTRAÇÃO
- * Gabarito da aula de Herança (Aula 02 — 24/08/2026)
+ * ARENA-CONNECT — AULA 03: ENUMERAÇÕES E A REGRA CRÍTICA (EQUIPES)
+ * Gabarito da aula de Enumerações + Equipe (Aula 03 — 26/08/2026)
  *
- * O que muda em relação à Aula 01:
- *  - Nova classe `Pessoa`: superclasse que concentra id e nome (encapsulados,
- *    privados), um método `exibir()` genérico, e `super()` no construtor.
- *  - `Atleta extends Pessoa`: herda id/nome de Pessoa, adiciona #idTurma
- *    e sobrescreve `exibir()` com informações específicas de turma/modalidade.
- *  - `Arbitro extends Pessoa`: herda id/nome de Pessoa, adiciona
- *    #numeroCredencial e #anosExperiencia, sobrescreve `exibir()`.
- *  - ArenaConnect e o menu permanecem inalterados em interface pública —
- *    mais um exemplo de como a herança é um detalhe interno, não quebra
- *    quem já usa as classes por fora.
+ * O que muda em relação à Aula 02 (herança):
+ *  - Novo enum `Modalidade`: padrão Object.freeze, já que JS não tem `enum`
+ *    nativo. Lista fechada de modalidades do interclasses.
+ *  - Nova classe `Equipe`: liga uma Turma a uma Modalidade. Tem lista de
+ *    atletas (vazia por enquanto — agregação de verdade só chega na Aula 04).
+ *  - REGRA DE NEGÓCIO CRÍTICA do projeto: uma Turma pode ter N Equipes, uma
+ *    por Modalidade — mas NUNCA duas Equipes da mesma Turma na mesma
+ *    Modalidade. Essa validação vive em ArenaConnect.adicionarEquipe(),
+ *    porque só ArenaConnect conhece a lista completa de equipes (mesma
+ *    lógica já usada para checar se uma Turma existe antes de vincular um
+ *    Atleta).
+ *  - Pessoa/Atleta/Arbitro (Aula 02) não mudam.
  */
 const prompt = require('prompt-sync')();
 
-// 1. Superclasse — o que Atleta e Arbitro têm em comum
+// 1. Enumeração — Object.freeze impede que o objeto seja alterado depois de
+// criado, simulando um "enum" (JS não tem essa palavra-chave nativa).
+const Modalidade = Object.freeze({
+    FUTSAL_MASCULINO: "Futsal Masculino",
+    FUTSAL_FEMININO: "Futsal Feminino",
+    VOLEI_MISTO: "Vôlei Misto",
+    BASQUETE_MASCULINO: "Basquete Masculino",
+    BASQUETE_FEMININO: "Basquete Feminino",
+    HANDEBOL_MISTO: "Handebol Misto",
+});
+
+// 2. Hierarquia de Pessoa (herdada da Aula 02, sem mudanças)
 
 class Pessoa {
-    #id;   // Identidade imutável — só getter, sem setter
-    #nome; // Escudo ativado — validação no setter
+    #id;
+    #nome;
 
     constructor(id, nome) {
         this.#id = id;
-        this.nome = nome; // aciona o setter de validação
+        this.nome = nome;
     }
 
     get id() {
@@ -31,7 +44,6 @@ class Pessoa {
     }
 
     set nome(novoNome) {
-        // Mínimo 3 caracteres — regra genérica para qualquer Pessoa.
         if (!novoNome || novoNome.length < 3) {
             console.log('[ERRO] Nome de pessoa inválido. Acesso negado.');
             return;
@@ -43,25 +55,20 @@ class Pessoa {
         return this.#nome;
     }
 
-    // Método genérico — sobrescrito pelas subclasses com informações específicas
     exibir() {
         console.log(`ID: ${this.id} | Pessoa: ${this.nome}`);
     }
 }
 
-// 2. Subclasses — especializam Pessoa com dados e comportamentos próprios
-
 class Atleta extends Pessoa {
-    #idTurma; // Específico de Atleta
+    #idTurma;
 
     constructor(id, nome, idTurma) {
-        super(id, nome); // Chama o construtor de Pessoa — obrigatório
-        this.idTurma = idTurma; // aciona o setter de validação
+        super(id, nome);
+        this.idTurma = idTurma;
     }
 
     set idTurma(novoIdTurma) {
-        // Firewall: bloqueia vazio/nulo/undefined e qualquer coisa que não
-        // seja um número inteiro positivo.
         if (
             novoIdTurma === null ||
             novoIdTurma === undefined ||
@@ -79,10 +86,8 @@ class Atleta extends Pessoa {
         return this.#idTurma;
     }
 
-    // Sobrescrita (override) — mesmo método de Pessoa, mas com informação específica
     exibir(nomeTurma) {
-        super.exibir();
-        console.log(`Turma: ${nomeTurma}`);
+        console.log(`ID: ${this.id} | Atleta: ${this.nome} | Turma: ${nomeTurma}`);
     }
 }
 
@@ -91,7 +96,7 @@ class Arbitro extends Pessoa {
     #anosExperiencia;
 
     constructor(id, nome, numeroCredencial, anosExperiencia) {
-        super(id, nome); // Chama o construtor de Pessoa
+        super(id, nome);
         this.numeroCredencial = numeroCredencial;
         this.anosExperiencia = anosExperiencia;
     }
@@ -115,7 +120,6 @@ class Arbitro extends Pessoa {
     }
 
     set anosExperiencia(anos) {
-        // "< 0" e não "<= 0": um árbitro novato tem 0 anos de experiência.
         if (
             anos === null ||
             anos === undefined ||
@@ -133,26 +137,116 @@ class Arbitro extends Pessoa {
         return this.#anosExperiencia;
     }
 
-    // Sobrescrita — informações específicas de árbitro
     exibir() {
         console.log(`ID: ${this.id} | Árbitro: ${this.nome} | Credencial: ${this.numeroCredencial} | Experiência: ${this.anosExperiencia} ano(s)`);
     }
 }
 
-// 3. A Classe Gerenciadora (inalterada na interface pública)
+class Turma {
+    #id;
+    #nome;
+
+    constructor(id, nome) {
+        this.#id = id;
+        this.nome = nome;
+    }
+
+    get id() {
+        return this.#id;
+    }
+
+    set nome(novoNome) {
+        if (!novoNome || novoNome.length < 2) {
+            console.log('[ERRO] Nome de turma inválido. Acesso negado.');
+            return;
+        }
+        this.#nome = novoNome.toUpperCase();
+    }
+
+    get nome() {
+        return this.#nome;
+    }
+
+    exibir() {
+        console.log(`ID: ${this.id} | Sala: ${this.nome}`);
+    }
+}
+
+// 3. Equipe — liga uma Turma a uma Modalidade
+
+class Equipe {
+    #id;
+    #idTurma;
+    #modalidade;
+    #atletas; // Lista de referência — agregação de verdade chega na Aula 04
+
+    constructor(id, idTurma, modalidade) {
+        this.#id = id;
+        this.idTurma = idTurma;       // aciona o setter
+        this.modalidade = modalidade; // aciona o setter
+        this.#atletas = [];
+    }
+
+    get id() {
+        return this.#id;
+    }
+
+    set idTurma(novoIdTurma) {
+        if (!Number.isInteger(novoIdTurma) || novoIdTurma <= 0) {
+            console.log('[ERRO] ID de turma inválido para a equipe. Acesso negado.');
+            return;
+        }
+        this.#idTurma = novoIdTurma;
+    }
+
+    get idTurma() {
+        return this.#idTurma;
+    }
+
+    set modalidade(novaModalidade) {
+        // Valida contra a lista FECHADA de modalidades do enum — não aceita
+        // qualquer string, só as que existem em Modalidade.
+        const modalidadesValidas = Object.values(Modalidade);
+        if (!modalidadesValidas.includes(novaModalidade)) {
+            console.log('[ERRO] Modalidade inválida. Acesso negado.');
+            return;
+        }
+        this.#modalidade = novaModalidade;
+    }
+
+    get modalidade() {
+        return this.#modalidade;
+    }
+
+    get atletas() {
+        return this.#atletas; // Retorna a referência — proteção real de verdade vem na Aula 04
+    }
+
+    exibir(nomeTurma) {
+        console.log(`ID: ${this.id} | Turma: ${nomeTurma} | Modalidade: ${this.modalidade} | Atletas: ${this.atletas.length}`);
+    }
+}
+
+// 4. A Classe Gerenciadora
 class ArenaConnect {
     constructor() {
         this.turmas = [];
         this.atletas = [];
         this.arbitros = [];
+        this.equipes = [];
         this.idTurmaContador = 1;
         this.idAtletaContador = 1;
         this.idArbitroContador = 1;
+        this.idEquipeContador = 1;
     }
 
     adicionarTurma() {
         const nome = prompt("Nome da nova turma: ");
         const novaTurma = new Turma(this.idTurmaContador++, nome);
+        if (!novaTurma.nome) {
+            console.log("✖ Turma não registrada: nome inválido.");
+            return;
+        }
         this.turmas.push(novaTurma);
         console.log("✔ Turma registrada com sucesso!");
     }
@@ -161,36 +255,6 @@ class ArenaConnect {
         console.log("\n=== LISTA DE TURMAS ===");
         if (this.turmas.length === 0) return console.log("Nenhuma turma no sistema.");
         this.turmas.forEach(t => t.exibir());
-    }
-
-    editarTurma() {
-        this.listarTurmas();
-        const id = parseInt(prompt("ID da turma para editar: "));
-        const turma = this.turmas.find(t => t.id === id);
-        if (turma) {
-            const nomeAntes = turma.nome;
-            const novoNome = prompt(`Novo nome para ${turma.nome}: `);
-            turma.nome = novoNome.toUpperCase();
-            if (turma.nome !== nomeAntes) {
-                console.log("✔ Dados atualizados!");
-            } else {
-                console.log(`✖ Nome mantido (${nomeAntes}) — valor informado inválido.`);
-            }
-        } else {
-            console.log("✖ Erro: ID não encontrado.");
-        }
-    }
-
-    removerTurma() {
-        this.listarTurmas();
-        const id = parseInt(prompt("ID da turma para remover: "));
-        const totalAntes = this.turmas.length;
-        this.turmas = this.turmas.filter(t => t.id !== id);
-        if (this.turmas.length < totalAntes) {
-            console.log("✔ Turma removida.");
-        } else {
-            console.log("✖ Erro: ID não encontrado.");
-        }
     }
 
     adicionarAtleta() {
@@ -223,7 +287,6 @@ class ArenaConnect {
         const numeroCredencial = parseInt(prompt("Número de Credencial: "));
         const anosExperiencia = parseInt(prompt("Anos de Experiência: "));
         const novoArbitro = new Arbitro(this.idArbitroContador++, nome, numeroCredencial, anosExperiencia);
-
         if (!novoArbitro.nome || novoArbitro.numeroCredencial === undefined || novoArbitro.anosExperiencia === undefined) {
             console.log("✖ Árbitro não registrado: dados inválidos.");
             return;
@@ -238,75 +301,73 @@ class ArenaConnect {
         this.arbitros.forEach(a => a.exibir());
     }
 
-    listarTodas() {
-        console.log("\n=== TODAS AS PESSOAS (Polimorfismo) ===");
-        const pessoas = [...this.atletas, ...this.arbitros];
-        if (pessoas.length === 0) return console.log("Nenhuma pessoa (além de turmas) no sistema.");
-        pessoas.forEach(p => p.exibir());
-    }
-}
+    // --- Equipe: aqui mora a Regra de Negócio Crítica do projeto ---
+    adicionarEquipe() {
+        this.listarTurmas();
+        const idT = parseInt(prompt("ID da Turma: "));
+        const turmaExiste = this.turmas.find(t => t.id === idT);
+        if (!turmaExiste) return console.log("✖ Erro: Turma inválida!");
 
-// Turma não herda de Pessoa (não é uma pessoa, é um agrupamento)
-class Turma {
-    #id;
-    #nome;
+        console.log("\nModalidades disponíveis:");
+        Object.values(Modalidade).forEach(m => console.log(`- ${m}`));
+        const modalidade = prompt("Modalidade (copie exatamente como está na lista acima): ");
 
-    constructor(id, nome) {
-        this.#id = id;
-        this.nome = nome;
-    }
-
-    get id() {
-        return this.#id;
-    }
-
-    set nome(novoNome) {
-        if (!novoNome || novoNome.length < 2) {
-            console.log('[ERRO] Nome de turma inválido. Acesso negado.');
+        // REGRA CRÍTICA: a mesma Turma não pode ter 2 Equipes na mesma
+        // Modalidade. Turmas diferentes PODEM ter equipe na mesma
+        // modalidade (ex.: 9A e 8B podem ter Futsal Masculino cada um).
+        const duplicada = this.equipes.find(e => e.idTurma === idT && e.modalidade === modalidade);
+        if (duplicada) {
+            console.log(`✖ Erro: a turma ${turmaExiste.nome} já tem uma equipe em "${modalidade}"!`);
             return;
         }
-        this.#nome = novoNome.toUpperCase();
+
+        const novaEquipe = new Equipe(this.idEquipeContador++, idT, modalidade);
+        if (!novaEquipe.modalidade) {
+            console.log("✖ Equipe não registrada: modalidade inválida.");
+            return;
+        }
+        this.equipes.push(novaEquipe);
+        console.log(`✔ Equipe registrada: ${turmaExiste.nome} em "${modalidade}"!`);
     }
 
-    get nome() {
-        return this.#nome;
-    }
-
-    exibir() {
-        console.log(`ID: ${this.id} | Sala: ${this.nome}`);
+    listarEquipes() {
+        console.log("\n=== LISTA DE EQUIPES ===");
+        if (this.equipes.length === 0) return console.log("Nenhuma equipe no sistema.");
+        this.equipes.forEach(e => {
+            const turma = this.turmas.find(t => t.id === e.idTurma);
+            e.exibir(turma ? turma.nome : "TURMA NÃO ENCONTRADA");
+        });
     }
 }
 
-// 4. Menu Principal
+// 5. Menu Principal
 function main() {
     const sistema = new ArenaConnect();
 
     while (true) {
         console.log(`
  ==============================
- ARENA-CONNECT v2.4 - PBE1 - Aula 02: Herança
+ ARENA-CONNECT v2.5 - PBE1 - Aula 03: Equipes e Modalidades
  ==============================
  1. Registrar Turma
  2. Listar Turmas
- 3. Editar Turma
- 4. Remover Turma
- 5. Registrar Atleta
- 6. Listar Atletas
- 7. Registrar Árbitro
- 8. Listar Árbitros
- 9. Listar TODAS as Pessoas (teste de polimorfismo)
+ 3. Registrar Atleta
+ 4. Listar Atletas
+ 5. Registrar Árbitro
+ 6. Listar Árbitros
+ 7. Registrar Equipe
+ 8. Listar Equipes
  0. Sair
  ==============================`);
         let op = prompt("Escolha: ");
         if (op === '1') sistema.adicionarTurma();
         else if (op === '2') sistema.listarTurmas();
-        else if (op === '3') sistema.editarTurma();
-        else if (op === '4') sistema.removerTurma();
-        else if (op === '5') sistema.adicionarAtleta();
-        else if (op === '6') sistema.listarAtletas();
-        else if (op === '7') sistema.adicionarArbitro();
-        else if (op === '8') sistema.listarArbitros();
-        else if (op === '9') sistema.listarTodas();
+        else if (op === '3') sistema.adicionarAtleta();
+        else if (op === '4') sistema.listarAtletas();
+        else if (op === '5') sistema.adicionarArbitro();
+        else if (op === '6') sistema.listarArbitros();
+        else if (op === '7') sistema.adicionarEquipe();
+        else if (op === '8') sistema.listarEquipes();
         else if (op === '0') break;
         else console.log("Opção inválida!");
     }
@@ -316,4 +377,4 @@ if (require.main === module) {
     main();
 }
 
-module.exports = { Pessoa, Atleta, Arbitro, ArenaConnect, Turma };
+module.exports = { Modalidade, Pessoa, Atleta, Arbitro, Turma, Equipe, ArenaConnect };
