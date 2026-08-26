@@ -22,8 +22,7 @@
  */
 const prompt = require('prompt-sync')();
 
-// 1. Enumeração — Object.freeze impede que o objeto seja alterado depois de
-// criado, simulando um "enum" (JS não tem essa palavra-chave nativa).
+// 1. Enumeração (herdada da Aula 03, sem mudanças)
 const Modalidade = Object.freeze({
     FUTSAL_MASCULINO: "Futsal Masculino",
     FUTSAL_FEMININO: "Futsal Feminino",
@@ -177,13 +176,13 @@ class Turma {
     }
 }
 
-// 3. Equipe — liga uma Turma a uma Modalidade
+// 3. Equipe — agora com AGREGAÇÃO de verdade
 
 class Equipe {
     #id;
     #idTurma;
     #modalidade;
-    #atletas; // Lista de IDs
+    #atletas; // Guarda IDs, não objetos — os atletas de verdade moram em ArenaConnect.atletas
 
     constructor(id, idTurma, modalidade) {
         this.#id = id;
@@ -209,8 +208,6 @@ class Equipe {
     }
 
     set modalidade(novaModalidade) {
-        // Valida contra a lista FECHADA de modalidades do enum — não aceita
-        // qualquer string, só as que existem em Modalidade.
         const modalidadesValidas = Object.values(Modalidade);
         if (!modalidadesValidas.includes(novaModalidade)) {
             console.log('[ERRO] Modalidade inválida. Acesso negado.');
@@ -224,30 +221,32 @@ class Equipe {
     }
 
     get atletas() {
-        return this.#atletas; // Retorna a referência — proteção real de verdade vem na Aula 04
+        return this.#atletas;
     }
 
-    adicionarAtleta(idAtleta){
-        if (!Number.isInteger(idAtleta) || idAtleta <= 0){
-            console.log('[ERRO] Id de Atleta Invalido.');
+    // AGREGAÇÃO: só guarda o ID. Não sabe nada sobre o Atleta em si — quem
+    // resolve nome/dados é sempre ArenaConnect, dona da lista completa.
+    adicionarAtleta(idAtleta) {
+        if (!Number.isInteger(idAtleta) || idAtleta <= 0) {
+            console.log('[ERRO] ID de atleta inválido. Acesso negado.');
             return false;
         }
-        if (this.#atletas.includes(idAtleta)){
-            console.log('[ERRO] Atleta já cadastrado nesta equipe.')
-            return false;
+        if (this.#atletas.includes(idAtleta)) {
+            return false; // já está na equipe, não duplica
         }
         this.#atletas.push(idAtleta);
         return true;
     }
 
-    removerAtleta(idAtleta){
+    removerAtleta(idAtleta) {
         const totalAntes = this.#atletas.length;
         this.#atletas = this.#atletas.filter(id => id !== idAtleta);
-        return this.#atletas.length < totalAntes;
+        return this.#atletas.length < totalAntes; // true só se removeu de fato
     }
 
-    exibir(nomeTurma) {
-        console.log(`ID: ${this.id} | Turma: ${nomeTurma} | Modalidade: ${this.modalidade} | Atletas: ${this.atletas.length}`);
+    exibir(nomeTurma, nomesAtletas = []) {
+        const lista = nomesAtletas.length > 0 ? nomesAtletas.join(", ") : "nenhum atleta ainda";
+        console.log(`ID: ${this.id} | Turma: ${nomeTurma} | Modalidade: ${this.modalidade} | Atletas (${this.atletas.length}): ${lista}`);
     }
 }
 
@@ -325,7 +324,6 @@ class ArenaConnect {
         this.arbitros.forEach(a => a.exibir());
     }
 
-    // --- Equipe: aqui mora a Regra de Negócio Crítica do projeto ---
     adicionarEquipe() {
         this.listarTurmas();
         const idT = parseInt(prompt("ID da Turma: "));
@@ -336,9 +334,6 @@ class ArenaConnect {
         Object.values(Modalidade).forEach(m => console.log(`- ${m}`));
         const modalidade = prompt("Modalidade (copie exatamente como está na lista acima): ");
 
-        // REGRA CRÍTICA: a mesma Turma não pode ter 2 Equipes na mesma
-        // Modalidade. Turmas diferentes PODEM ter equipe na mesma
-        // modalidade (ex.: 9A e 8B podem ter Futsal Masculino cada um).
         const duplicada = this.equipes.find(e => e.idTurma === idT && e.modalidade === modalidade);
         if (duplicada) {
             console.log(`✖ Erro: a turma ${turmaExiste.nome} já tem uma equipe em "${modalidade}"!`);
@@ -359,8 +354,72 @@ class ArenaConnect {
         if (this.equipes.length === 0) return console.log("Nenhuma equipe no sistema.");
         this.equipes.forEach(e => {
             const turma = this.turmas.find(t => t.id === e.idTurma);
-            e.exibir(turma ? turma.nome : "TURMA NÃO ENCONTRADA");
+            const nomesAtletas = e.atletas
+                .map(idA => this.atletas.find(a => a.id === idA))
+                .filter(a => a) // ignora IDs órfãos, se algum dia existirem
+                .map(a => a.nome);
+            e.exibir(turma ? turma.nome : "TURMA NÃO ENCONTRADA", nomesAtletas);
         });
+    }
+
+    removerEquipe() {
+        this.listarEquipes();
+        const idE = parseInt(prompt("ID da Equipe a remover: "));
+        const totalAntes = this.equipes.length;
+        this.equipes = this.equipes.filter(e => e.id !== idE);
+
+        if (this.equipes.length === totalAntes) {
+            console.log("✖ Erro: ID não encontrado.");
+            return;
+        }
+
+        // AGREGAÇÃO EM AÇÃO: apagar a equipe NÃO apaga os atletas do sistema.
+        console.log(`✔ Equipe removida. Os atletas continuam no sistema (total de atletas: ${this.atletas.length}).`);
+    }
+
+    // --- Ponte Equipe <-> Atleta: aqui mora a Agregação do projeto ---
+
+    vincularAtletaEquipe() {
+        this.listarEquipes();
+        const idE = parseInt(prompt("ID da Equipe: "));
+        const equipe = this.equipes.find(e => e.id === idE);
+        if (!equipe) return console.log("✖ Erro: Equipe inválida!");
+
+        this.listarAtletas();
+        const idA = parseInt(prompt("ID do Atleta: "));
+        const atleta = this.atletas.find(a => a.id === idA);
+        if (!atleta) return console.log("✖ Erro: Atleta inválido!");
+
+        // Regra de integridade: o atleta só pode jogar por equipe da PRÓPRIA turma
+        if (atleta.idTurma !== equipe.idTurma) {
+            console.log(`✖ Erro: ${atleta.nome} não pertence à turma dessa equipe!`);
+            return;
+        }
+
+        const vinculou = equipe.adicionarAtleta(idA);
+        if (!vinculou) {
+            console.log(`✖ Erro: ${atleta.nome} já está nessa equipe!`);
+            return;
+        }
+        console.log(`✔ ${atleta.nome} vinculado à equipe de "${equipe.modalidade}"!`);
+    }
+
+    desvincularAtletaEquipe() {
+        this.listarEquipes();
+        const idE = parseInt(prompt("ID da Equipe: "));
+        const equipe = this.equipes.find(e => e.id === idE);
+        if (!equipe) return console.log("✖ Erro: Equipe inválida!");
+
+        const idA = parseInt(prompt("ID do Atleta a remover da equipe: "));
+        const removeu = equipe.removerAtleta(idA);
+        if (!removeu) {
+            console.log("✖ Erro: esse atleta não está nessa equipe!");
+            return;
+        }
+
+        // AGREGAÇÃO EM AÇÃO: o atleta sai da equipe, mas continua no sistema.
+        const atleta = this.atletas.find(a => a.id === idA);
+        console.log(`✔ ${atleta.nome} removido da equipe. Ele continua no sistema (total de atletas: ${this.atletas.length}).`);
     }
 }
 
@@ -371,7 +430,7 @@ function main() {
     while (true) {
         console.log(`
  ==============================
- ARENA-CONNECT v2.5 - PBE1 - Aula 03: Equipes e Modalidades
+ ARENA-CONNECT v2.6 - PBE1 - Aula 04: Agregação
  ==============================
  1. Registrar Turma
  2. Listar Turmas
@@ -381,6 +440,9 @@ function main() {
  6. Listar Árbitros
  7. Registrar Equipe
  8. Listar Equipes
+ 9. Vincular Atleta à Equipe
+ 10. Desvincular Atleta da Equipe
+ 11. Remover Equipe
  0. Sair
  ==============================`);
         let op = prompt("Escolha: ");
