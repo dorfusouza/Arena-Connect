@@ -1,24 +1,19 @@
 /**
- * ARENA-CONNECT — AULA 04: AGREGAÇÃO E COMPOSIÇÃO
- * Gabarito do bloco de Agregação (dado como Bloco 2 da Aula 03 — 26/08/2026,
- * conteúdo antecipado da Aula 04 original)
+ * ARENA-CONNECT — AULA 03: ENUMERAÇÕES E A REGRA CRÍTICA (EQUIPES)
+ * Gabarito da aula de Enumerações + Equipe (Aula 03 — 26/08/2026)
  *
- * O que muda em relação à Aula 03 (enumerações + equipe):
- *  - `Equipe` ganha uma gestão de verdade da lista `#atletas`: métodos
- *    `adicionarAtleta(idAtleta)` e `removerAtleta(idAtleta)` — antes a lista
- *    existia mas nunca era manipulada.
- *  - AGREGAÇÃO (não composição!): `Equipe` guarda apenas os IDs dos atletas
- *    que joga com ela. Os atletas continuam existindo, de verdade, na lista
- *    geral `ArenaConnect.atletas` — remover da equipe não remove do sistema,
- *    e remover a equipe não remove os atletas.
- *  - `ArenaConnect.vincularAtletaEquipe()` / `desvincularAtletaEquipe()`:
- *    fazem a ponte, com uma regra de integridade extra: um atleta só pode
- *    jogar por uma equipe da PRÓPRIA turma (mesma lógica de duas camadas —
- *    formato no setter, regra de negócio na gerenciadora — usada desde a
- *    Aula 01).
- *  - `ArenaConnect.removerEquipe()` demonstra a independência: apaga a
- *    equipe, os atletas continuam no sistema.
- *  - Pessoa/Atleta/Arbitro/Turma/Modalidade (Aulas 02-03) não mudam.
+ * O que muda em relação à Aula 02 (herança):
+ *  - Novo enum `Modalidade`: padrão Object.freeze, já que JS não tem `enum`
+ *    nativo. Lista fechada de modalidades do interclasses.
+ *  - Nova classe `Equipe`: liga uma Turma a uma Modalidade. Tem lista de
+ *    atletas (vazia por enquanto — agregação de verdade só chega na Aula 04).
+ *  - REGRA DE NEGÓCIO CRÍTICA do projeto: uma Turma pode ter N Equipes, uma
+ *    por Modalidade — mas NUNCA duas Equipes da mesma Turma na mesma
+ *    Modalidade. Essa validação vive em ArenaConnect.adicionarEquipe(),
+ *    porque só ArenaConnect conhece a lista completa de equipes (mesma
+ *    lógica já usada para checar se uma Turma existe antes de vincular um
+ *    Atleta).
+ *  - Pessoa/Atleta/Arbitro (Aula 02) não mudam.
  */
 const prompt = require('prompt-sync')();
 
@@ -183,12 +178,12 @@ class Equipe {
     #id;
     #idTurma;
     #modalidade;
-    #atletas; // Lista de IDs
+    #atletas; // Lista de referência — agregação de verdade chega na Aula 04
 
     constructor(id, idTurma, modalidade) {
         this.#id = id;
-        this.idTurma = idTurma;
-        this.modalidade = modalidade;
+        this.idTurma = idTurma;       // aciona o setter
+        this.modalidade = modalidade; // aciona o setter
         this.#atletas = [];
     }
 
@@ -225,25 +220,6 @@ class Equipe {
 
     get atletas() {
         return this.#atletas; // Retorna a referência — proteção real de verdade vem na Aula 04
-    }
-
-    adicionarAtleta(idAtleta){
-        if (!Number.isInteger(idAtleta) || idAtleta <= 0){
-            console.log('[ERRO] Id de Atleta Invalido.');
-            return false;
-        }
-        if (this.#atletas.includes(idAtleta)){
-            console.log('[ERRO] Atleta já cadastrado nesta equipe.')
-            return false;
-        }
-        this.#atletas.push(idAtleta);
-        return true;
-    }
-
-    removerAtleta(idAtleta){
-        const totalAntes = this.#atletas.length;
-        this.#atletas = this.#atletas.filter(id => id !== idAtleta);
-        return this.#atletas.length < totalAntes;
     }
 
     exibir(nomeTurma) {
@@ -392,9 +368,6 @@ function main() {
         else if (op === '6') sistema.listarArbitros();
         else if (op === '7') sistema.adicionarEquipe();
         else if (op === '8') sistema.listarEquipes();
-        else if (op === '9') sistema.vincularAtletaEquipe();
-        else if (op === '10') sistema.desvincularAtletaEquipe();
-        else if (op === '11') sistema.removerEquipe();
         else if (op === '0') break;
         else console.log("Opção inválida!");
     }
