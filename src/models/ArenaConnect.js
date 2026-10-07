@@ -235,7 +235,7 @@ class ArenaConnect {
     #rotularEquipe(idEquipe){
         const equipe = this.equipes.find(e => e.id === idEquipe);
         if (!equipe) return 'Equipe não encontrada';
-        const turma = this.turmas.find(t => t.id === equipe.id);
+        const turma = this.turmas.find(t => t.id === equipe.idTurma);
         return `${turma ? turma.nome : '?'} (${equipe.modalidade})`;
     }
 
@@ -263,14 +263,18 @@ class ArenaConnect {
             atletas: this.atletas.map(a => ({ id: a.id, nome: a.nome, idTurma: a.idTurma })),
             arbitros: this.arbitros.map(a => ({ id: a.id, nome: a.nome,
                 numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia })),
-
             equipes: this.equipes.map(e => ({ id: e.id, idTurma: e.idTurma, 
                 modalidade: e.modalidade, atletas: e.atletas })),
+            partidas: this.partidas.map(p => ({
+                id: p.id, idEquipeA: p.idEquipeA, idEquipeB: p.idEquipeB, modalidade: p.modalidade,
+                golsA: p.placar.golsA, golsB: p.placar.golsB,
+            })),
 
             idTurmaContador: this.idTurmaContador,
             idAtletaContador: this.idAtletaContador,
             idArbitroContador: this.idArbitroContador,
             idEquipeContador: this.idEquipeContador,
+            idPartidaContador: this.idPartidaContador,
         };
         fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dados, null, 2));
         console.log(`✔ Estado salvo em ${ARQUIVO_DADOS}`);
@@ -298,13 +302,17 @@ class ArenaConnect {
             e.atletas.forEach(idAtleta => equipe.adicionarAtleta(idAtleta));
             return equipe;
         });
+        this.partidas = dados.partidas.map(p => {
+            return CadastroFactory.criarPartida(p.id, p.idEquipeA, p.idEquipeB, p.modalidade, p.golsA, p.golsB);
+        });
 
         this.idTurmaContador = dados.idTurmaContador;
         this.idAtletaContador = dados.idAtletaContador;
         this.idArbitroContador = dados.idArbitroContador;
         this.idEquipeContador = dados.idEquipeContador;
+        this.idPartidaContador = dados.idPartidaContador;
         console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), 
-            ${this.equipes.length} equipe(s).`);
+            ${this.equipes.length} equipe(s), ${this.partidas.length} partida(s).`);
     }
 
 }

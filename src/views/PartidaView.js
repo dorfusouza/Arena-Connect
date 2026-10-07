@@ -8,8 +8,7 @@ const PartidaView = {
         return parseInt(prompt(mensagem));
     },
     mostrarRegistrada(nomeA, golsA, nomeB, golsB) {
-        console.log(`[SUCESSO] Partida registrada: ${nomeA} ${golsA}
-             x ${golsB} ${nomeB}!`)
+        console.log(`[SUCESSO] Partida registrada: ${nomeA} ${golsA} x ${golsB} ${nomeB}!`);
     },
     mostrarErroCadastro(mensagem) {
         console.log(`[ERRO] Não foi possível registrar a partida: ${mensagem}`);

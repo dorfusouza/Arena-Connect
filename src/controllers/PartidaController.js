@@ -8,10 +8,9 @@ const PartidaController = {
             const idEquipeB = PartidaView.perguntarIdEquipe("Digite ID equipe B: ");
             const golsA = PartidaView.perguntarGols("Informe gols da Equipe A: ");
             const golsB = PartidaView.perguntarGols("Informe gols da Equipe B: ");
-            const { equipeA, equipeB } = sistema.registrarPartida(idEquipeA, idEquipeB, 
-                golsA, golsB);
-            PartidaView.mostrarRegistrada(equipeA.modalidade, equipeB.modalidade, 
-                golsA, golsB)
+           
+            const { nomeEquipeA, nomeEquipeB } = sistema.registrarPartida(idEquipeA, idEquipeB, golsA, golsB);
+            PartidaView.mostrarRegistrada(nomeEquipeA, golsA, nomeEquipeB, golsB);
         } catch (erro) {
             PartidaView.mostrarErroCadastro(erro.message);
         }
@@ -20,3 +19,5 @@ const PartidaController = {
         PartidaView.listarPartidas(sistema.listarPartidas());
     }
 }
+
+module.exports = PartidaController;

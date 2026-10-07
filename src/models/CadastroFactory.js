@@ -2,6 +2,7 @@ const Modalidade = require('./Modalidade');
 const { Atleta, Arbitro } = require('./Pessoa');
 const Turma = require('./Turma');
 const Equipe = require('./Equipe');
+const Partida = require('./Partida');
 
 // FACTORY: um único ponto de criação das entidades. Os setters das classes só
 // imprimem "[ERRO]" e ignoram o valor inválido — a fábrica confere o resultado

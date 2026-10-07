@@ -59,8 +59,7 @@ class Partida {
     }
 
     exibir(nomeEquipeA, nomeEquipeB) {
-        console.log(`ID: ${this.id} | ${nomeEquipeA} ${this.placar.golsA} x 
-            ${this.placar.golsB} ${nomeEquipeB} | ${this.modalidade}`);
+        console.log(`ID: ${this.id} | ${nomeEquipeA} ${this.placar.golsA} x ${this.placar.golsB} ${nomeEquipeB} | ${this.modalidade}`);
     }
 }
 

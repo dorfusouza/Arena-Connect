@@ -5,6 +5,7 @@
 const ArenaConnect = require('./src/models/ArenaConnect');
 const MenuView = require('./src/views/MenuView');
 const AtletaController = require('./src/controllers/AtletaController');
+const PartidaController = require('./src/controllers/PartidaController');
 
 function main() {
     const sistema = ArenaConnect.getInstancia();
@@ -25,6 +26,9 @@ function main() {
         else if (op === '9') sistema.vincularAtletaEquipe();
         else if (op === '10') sistema.desvincularAtletaEquipe();
         else if (op === '11') sistema.removerEquipe();
+        else if (op === '12') PartidaController.registrarPartida(sistema); // NOVO
+        else if (op === '13') PartidaController.listar(sistema);
+        // else if (op === '14') ClassificacaoController.mostrar(sistema); // NOVO
         else if (op === '0') {
             sistema.salvarEstado(); // NOVO: grava tudo antes de sair
             break;
