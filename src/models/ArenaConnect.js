@@ -1,5 +1,16 @@
-const Modalidade = require('./src/models/Modalidade');
-const CadastroFactory = require('./src/models/CadastroFactory');
+// CORREÇÃO (05/10): os dois requires abaixo apontavam para './src/models/...'
+// — mas este arquivo JÁ ESTÁ dentro de src/models/, então o caminho certo é
+// relativo a ele mesmo ('./Modalidade', não './src/models/Modalidade'). Como
+// estava, nenhum require.main deste arquivo funcionava — o projeto não rodava.
+const Modalidade = require('./Modalidade');
+const CadastroFactory = require('./CadastroFactory');
+const fs = require('fs');
+const path = require('path');
+
+// NOVO (Persistência): onde o estado do sistema é salvo. Fica na raiz do
+// projeto (dois níveis acima de src/models/) — ver .gitignore, dados de teste
+// não sobem para o repositório.
+const ARQUIVO_DADOS = path.join(__dirname, '..', '..', 'dados-arena-connect.json');
 
 class ArenaConnect {
     static #instancia = null;
@@ -69,14 +80,14 @@ class ArenaConnect {
         const novoAtleta = CadastroFactory.criarAtleta(this.idAtletaContador, nome, idT);
         this.idAtletaContador++;
         this.atletas.push(novoAtleta);
-        return { atleta, turma };
+        return { atleta: novoAtleta, turma };
     }
 
     listarAtletas() {
         return this.atletas.map(atleta => ({
             atleta,
             nomeTurma: this.turmas.find(t => t.id === atleta.idTurma)?.nome ?? 'Turma não encontrada',
-        }))
+        }));
     }
 
     adicionarArbitro() {
@@ -195,7 +206,60 @@ class ArenaConnect {
             console.log(`✖ Não foi possível desvincular: ${erro.message}`);
         }
     }
-}
 
+    // NOVO (Persistência): grava TODO o estado do sistema em JSON. Fica no
+    // Model (aqui), nunca na View ou no Controller — persistir dados é regra
+    // de negócio, não interface.
+    //
+    // ARMADILHA (vale para todas as nossas classes): `JSON.stringify(turma)`
+    // sozinho vira `{}` — nome é um campo PRIVADO (#nome) com só um getter;
+    // JSON.stringify só enxerga propriedades próprias e enumeráveis do
+    // objeto, e um getter de classe não é isso. Por isso toda entidade abaixo
+    // é convertida à mão para um objeto comum (id, nome, ...) antes de salvar.
+    salvarEstado() {
+        const dados = {
+            turmas: this.turmas.map(t => ({ id: t.id, nome: t.nome })),
+            atletas: this.atletas.map(a => ({ id: a.id, nome: a.nome, idTurma: a.idTurma })),
+            arbitros: this.arbitros.map(a => ({ id: a.id, nome: a.nome, numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia })),
+            equipes: this.equipes.map(e => ({ id: e.id, idTurma: e.idTurma, modalidade: e.modalidade, atletas: e.atletas })),
+            idTurmaContador: this.idTurmaContador,
+            idAtletaContador: this.idAtletaContador,
+            idArbitroContador: this.idArbitroContador,
+            idEquipeContador: this.idEquipeContador,
+        };
+        fs.writeFileSync(ARQUIVO_DADOS, JSON.stringify(dados, null, 2));
+        console.log(`✔ Estado salvo em ${ARQUIVO_DADOS}`);
+    }
+
+    // NOVO (Persistência): o ponto chave da aula — JSON.parse devolve objetos
+    // "crus" (sem os métodos da classe, sem os campos privados funcionando).
+    // Por isso reconstruímos cada entidade chamando a CadastroFactory de novo,
+    // com os dados lidos — exatamente como se o usuário tivesse digitado.
+    carregarEstado() {
+        if (!fs.existsSync(ARQUIVO_DADOS)) {
+            console.log('Nenhum estado salvo encontrado ainda — começando do zero.');
+            return;
+        }
+        const dados = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf-8'));
+
+        this.turmas = dados.turmas.map(t => CadastroFactory.criarTurma(t.id, t.nome));
+        this.atletas = dados.atletas.map(a => CadastroFactory.criarAtleta(a.id, a.nome, a.idTurma));
+        this.arbitros = dados.arbitros.map(a => CadastroFactory.criarArbitro(a.id, a.nome, a.numeroCredencial, a.anosExperiencia));
+
+        this.equipes = dados.equipes.map(e => {
+            const equipe = CadastroFactory.criarEquipe(e.id, e.idTurma, e.modalidade);
+            // #atletas é privado e não tem setter — reconstruímos chamando o
+            // mesmo método público usado no fluxo normal, um ID de cada vez.
+            e.atletas.forEach(idAtleta => equipe.adicionarAtleta(idAtleta));
+            return equipe;
+        });
+
+        this.idTurmaContador = dados.idTurmaContador;
+        this.idAtletaContador = dados.idAtletaContador;
+        this.idArbitroContador = dados.idArbitroContador;
+        this.idEquipeContador = dados.idEquipeContador;
+        console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), ${this.equipes.length} equipe(s).`);
+    }
+}
 
 module.exports = ArenaConnect;

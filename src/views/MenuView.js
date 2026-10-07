@@ -4,7 +4,7 @@ const MenuView = {
     mostrarMenu() {
         console.log(`
  ==============================
- ARENA-CONNECT v3.0 - PBE1 - Singleton + Factory
+ ARENA-CONNECT v4.0 - PBE1 - Persistencia
  ==============================
  1. Registrar Turma
  2. Listar Turmas
@@ -17,7 +17,7 @@ const MenuView = {
  9. Vincular Atleta à Equipe
  10. Desvincular Atleta da Equipe
  11. Remover Equipe
- 0. Sair
+ 0. Sair (salva o estado automaticamente)
  ==============================`);
         return prompt("Escolha: ");
     },

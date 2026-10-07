@@ -43,3 +43,6 @@ npm-offline-packages/
 .yarn/unplugged
 .yarn/build-state.yml
 .pnpm-store
+
+# Dados de teste salvos pelo sistema (persistência em arquivo)
+dados-arena-connect.json
