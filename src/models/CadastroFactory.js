@@ -35,6 +35,15 @@ class CadastroFactory {
         if (arbitro.anosExperiencia === undefined) throw new Error('Anos de experiência inválidos.');
         return arbitro;
     }
+
+    static criarPartida(id, idEquipeA, idEquipeB, modalidade, golsA, golsB) {
+        const partida = new Partida(id, idEquipeA, idEquipeB, modalidade, golsA, golsB);
+        if (partida.idEquipeA === undefined) throw new Error('Equipe A inválida.');
+        if (partida.idEquipeB === undefined) throw new Error('Equipe B inválida.');
+        if (partida.placar.golsA === undefined) throw new Error('Gols da equipe A inválidos.');
+        if (partida.placar.golsB === undefined) throw new Error('Gols da equipe B inválidos.');
+        return partida;
+    }
 }
 
 module.exports = CadastroFactory;

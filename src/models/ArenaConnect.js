@@ -4,6 +4,7 @@ const Modalidade = require('./Modalidade');
 const CadastroFactory = require('./CadastroFactory');
 const fs = require('fs');
 const path = require('path');
+const { error } = require('console');
 
 // NOVO (Persistência): onde o estado do sistema é salvo. Fica na raiz do
 // projeto (dois níveis acima de src/models/) — ver .gitignore, dados de teste
@@ -28,10 +29,12 @@ class ArenaConnect {
         this.atletas = [];
         this.arbitros = [];
         this.equipes = [];
+        this.partidas = [];
         this.idTurmaContador = 1;
         this.idAtletaContador = 1;
         this.idArbitroContador = 1;
         this.idEquipeContador = 1;
+        this.idPartidaContador = 1;
     }
 
     adicionarTurma() {
@@ -205,6 +208,46 @@ class ArenaConnect {
         }
     }
 
+
+    registrarPartida(idEquipeA, idEquipeB, golsA, golsB){
+        const equipeA = this.buscarEquipeOuFalhar(idEquipeA);
+        const equipeB = this.buscarEquipeOuFalhar(idEquipeB);
+
+        if(equipeA.modalidade !== equipeB.modalidade) {
+            throw new Error("as equipes não jogam a mesma modalidade!");
+        }
+        if(equipeA.id === equipeB.id){
+            throw new Error("Uma equipe não pode jogar contra ela mesma!");
+        }
+
+        const partida = CadastroFactory.criarPartida(
+            this.idPartidaContador, idEquipeA, idEquipeB, equipeA.modalidade, golsA, golsB
+        );
+        this.idPartidaContador++;
+        this.partidas.push(partida);
+        return {
+            partida,
+            nomeEquipeA: this.#rotularEquipe(idEquipeA),
+            nomeEquipeB: this.#rotularEquipe(idEquipeB),
+        };
+    }
+
+    #rotularEquipe(idEquipe){
+        const equipe = this.equipes.find(e => e.id === idEquipe);
+        if (!equipe) return 'Equipe não encontrada';
+        const turma = this.turmas.find(t => t.id === equipe.id);
+        return `${turma ? turma.nome : '?'} (${equipe.modalidade})`;
+    }
+
+    listarPartidas() {
+        return this.partidas.map( partida => ({
+            partida,
+            nomeEquipeA: this.#rotularEquipe(partida.idEquipeA),
+            nomeEquipeB: this.#rotularEquipe(partida.idEquipeB)
+            
+        }));
+    }
+
     // NOVO (Persistência): grava TODO o estado do sistema em JSON. Fica no
     // Model (aqui), nunca na View ou no Controller — persistir dados é regra
     // de negócio, não interface.
@@ -218,8 +261,12 @@ class ArenaConnect {
         const dados = {
             turmas: this.turmas.map(t => ({ id: t.id, nome: t.nome })),
             atletas: this.atletas.map(a => ({ id: a.id, nome: a.nome, idTurma: a.idTurma })),
-            arbitros: this.arbitros.map(a => ({ id: a.id, nome: a.nome, numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia })),
-            equipes: this.equipes.map(e => ({ id: e.id, idTurma: e.idTurma, modalidade: e.modalidade, atletas: e.atletas })),
+            arbitros: this.arbitros.map(a => ({ id: a.id, nome: a.nome,
+                numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia })),
+
+            equipes: this.equipes.map(e => ({ id: e.id, idTurma: e.idTurma, 
+                modalidade: e.modalidade, atletas: e.atletas })),
+
             idTurmaContador: this.idTurmaContador,
             idAtletaContador: this.idAtletaContador,
             idArbitroContador: this.idArbitroContador,
@@ -256,8 +303,10 @@ class ArenaConnect {
         this.idAtletaContador = dados.idAtletaContador;
         this.idArbitroContador = dados.idArbitroContador;
         this.idEquipeContador = dados.idEquipeContador;
-        console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), ${this.equipes.length} equipe(s).`);
+        console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), 
+            ${this.equipes.length} equipe(s).`);
     }
+
 }
 
 module.exports = ArenaConnect;
