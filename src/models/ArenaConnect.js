@@ -1,7 +1,5 @@
-// CORREÇÃO (05/10): os dois requires abaixo apontavam para './src/models/...'
-// — mas este arquivo JÁ ESTÁ dentro de src/models/, então o caminho certo é
-// relativo a ele mesmo ('./Modalidade', não './src/models/Modalidade'). Como
-// estava, nenhum require.main deste arquivo funcionava — o projeto não rodava.
+const prompt = require('prompt-sync')();
+
 const Modalidade = require('./Modalidade');
 const CadastroFactory = require('./CadastroFactory');
 const fs = require('fs');
