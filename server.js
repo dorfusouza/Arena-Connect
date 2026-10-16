@@ -6,6 +6,7 @@ const ArenaConnect = require('./src/models/ArenaConnect');
 const MenuView = require('./src/views/MenuView');
 const AtletaController = require('./src/controllers/AtletaController');
 const PartidaController = require('./src/controllers/PartidaController');
+const ClassificacaoController = require('./src/controllers/ClassificacaoController');
 
 function main() {
     const sistema = ArenaConnect.getInstancia();
@@ -14,6 +15,7 @@ function main() {
     while (true) {
         // CORREÇÃO (05/10): era MenuView.mostraMenu() (typo) — o método
         // certo é mostrarMenu(). Isso derrubava o sistema assim que abria.
+        sistema.salvarEstado(sistema);
         const op = MenuView.mostrarMenu();
         if (op === '1') sistema.adicionarTurma();
         else if (op === '2') sistema.listarTurmas();
@@ -28,12 +30,12 @@ function main() {
         else if (op === '11') sistema.removerEquipe();
         else if (op === '12') PartidaController.registrarPartida(sistema); // NOVO
         else if (op === '13') PartidaController.listar(sistema);
-        // else if (op === '14') ClassificacaoController.mostrar(sistema); // NOVO
+        else if (op === '14') ClassificacaoController.mostrar(sistema); // NOVO
         else if (op === '0') {
-            sistema.salvarEstado(); // NOVO: grava tudo antes de sair
             break;
         }
         else MenuView.mostrarOpcaoInvalida();
+        
     }
 }
 

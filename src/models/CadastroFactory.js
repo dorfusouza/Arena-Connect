@@ -44,7 +44,7 @@ class CadastroFactory {
         if (partida.placar.golsA === undefined) throw new Error('Gols da equipe A inválidos.');
         if (partida.placar.golsB === undefined) throw new Error('Gols da equipe B inválidos.');
         return partida;
-    }
+                               }
 }
 
 module.exports = CadastroFactory;

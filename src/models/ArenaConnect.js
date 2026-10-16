@@ -2,6 +2,7 @@ const prompt = require('prompt-sync')();
 
 const Modalidade = require('./Modalidade');
 const CadastroFactory = require('./CadastroFactory');
+const { calcularClassificacao } = require('./Classificacao');
 const fs = require('fs');
 const path = require('path');
 const { error } = require('console');
@@ -244,8 +245,22 @@ class ArenaConnect {
             partida,
             nomeEquipeA: this.#rotularEquipe(partida.idEquipeA),
             nomeEquipeB: this.#rotularEquipe(partida.idEquipeB)
-            
+
         }));
+    }
+
+    // NOVO (Composição, parte 2/2): tabela de classificação de TODAS as
+    // modalidades que têm equipe. Devolve dados prontos (nada é impresso aqui):
+    // [{ modalidade, linhas: [{ nomeEquipe, jogos, vitorias, ..., pontos }] }]
+    classificacaoGeral() {
+        const modalidades = [...new Set(this.equipes.map(e => e.modalidade))];
+        return modalidades.map(modalidade => {
+            const equipes = this.equipes.filter(e => e.modalidade === modalidade);
+            const partidas = this.partidas.filter(p => p.modalidade === modalidade);
+            const linhas = calcularClassificacao(equipes, partidas)
+                .map(l => ({ ...l, nomeEquipe: this.#rotularEquipe(l.idEquipe) }));
+            return { modalidade, linhas };
+        });
     }
 
     // NOVO (Persistência): grava TODO o estado do sistema em JSON. Fica no
