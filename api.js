@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const ArenaConnect = require('./src/models/ArenaConnect');
 
 const app = express();
@@ -8,7 +7,6 @@ sistema.carregarEstado();
 PORT = 3000;
 
 app.use(express.json());
-app.use(cors());
 
 app.use((req, res, next) => {
     sistema.carregarEstado(true);
