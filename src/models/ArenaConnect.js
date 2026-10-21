@@ -263,6 +263,46 @@ class ArenaConnect {
         });
     }
 
+    dadosTurmas(){
+        return this.turmas.map( t => ({id: t.id , nome: t.nome}))
+    }
+
+    dadosDaTurma(idTurma) {
+        const turma = this.buscarTurmaOuFalhar(idTurma);
+        return {id: turma.id , nome: turma.nome};
+    }
+
+    dadosEquipes(){
+        return this.equipes.map(e => this.#dadosDaEquipe(e));
+    }
+
+    dadosDaEquipe(idEquipe){
+        return this.#dadosDaEquipe(this.buscarEquipeOuFalhar(idEquipe));
+    }
+
+    #dadosDaEquipe(e){
+        return {
+            id: e.id,
+            turma: this.turmas
+                .find(t => t.id === e.idTurma)?.nome ?? 'Turma não encontrada',
+            atletas: e.atletas
+                .map(idA => this.atletas.find(a => a.id === idA))
+                .filter(a => a)
+                .map(a => a.nome),
+        }
+    }
+
+    dadosPartidas() {
+        return this.partidas.map(p => ({
+            id: p.id,
+            modalidade: p.modalidade,
+            equipeA: this.#rotularEquipe(p.idEquipeA),
+            equipeB: this.#rotularEquipe(p.idEquipeB),
+            golsA: p.placar.golsA,
+            golsB: p.placar.golsB,
+        }));
+    }
+
     // NOVO (Persistência): grava TODO o estado do sistema em JSON. Fica no
     // Model (aqui), nunca na View ou no Controller — persistir dados é regra
     // de negócio, não interface.
