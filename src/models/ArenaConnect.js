@@ -38,14 +38,32 @@ class ArenaConnect {
         this.idPartidaContador = 1;
     }
 
-    adicionarTurma() {
-        const nome = prompt("Nome da nova turma: ");
-        try {
-            this.turmas.push(CadastroFactory.criarTurma(this.idTurmaContador, nome));
-            this.idTurmaContador++;
-        } catch (erro) {
-            console.log(`✖ Turma não registrada: ${erro.message}`);
+    adicionarTurma(nome) {
+        const turma = CadastroFactory.criarTurma(this.idTurmaContador, nome);
+        this.idTurmaContador++;
+        this.turmas.push(turma);
+        return turma;
+    }
+
+    editarTurma(idTurma, novoNome) {
+        const turma = this.buscarTurmaOuFalhar(idTurma);
+        CadastroFactory.criarTurma(idTurma, novoNome);
+        turma.nome = novoNome;
+        return turma;
+    }
+
+    removerTurma(idTurma) {
+        const turma = this.buscarTurmaOuFalhar(idTurma);
+        if (this.atletas.some(a => a.idTurma === idTurma)) {
+            throw new Error(`a turma ${turma.nome} ainda tem atletas. 
+                Remova ou mude os atletas antes.`);
         }
+        if (this.equipes.some(e => e.idTurma === idTurma)) {
+            throw new Error(`a turma ${turma.nome} ainda tem equipes. 
+                Remova as equipes antes.`);
+        }
+        this.turmas = this.turmas.filter(t => t.id !== turma.id);
+        return turma;
     }
 
     listarTurmas() {
@@ -210,14 +228,14 @@ class ArenaConnect {
     }
 
 
-    registrarPartida(idEquipeA, idEquipeB, golsA, golsB){
+    registrarPartida(idEquipeA, idEquipeB, golsA, golsB) {
         const equipeA = this.buscarEquipeOuFalhar(idEquipeA);
         const equipeB = this.buscarEquipeOuFalhar(idEquipeB);
 
-        if(equipeA.modalidade !== equipeB.modalidade) {
+        if (equipeA.modalidade !== equipeB.modalidade) {
             throw new Error("as equipes não jogam a mesma modalidade!");
         }
-        if(equipeA.id === equipeB.id){
+        if (equipeA.id === equipeB.id) {
             throw new Error("Uma equipe não pode jogar contra ela mesma!");
         }
 
@@ -233,7 +251,7 @@ class ArenaConnect {
         };
     }
 
-    #rotularEquipe(idEquipe){
+    #rotularEquipe(idEquipe) {
         const equipe = this.equipes.find(e => e.id === idEquipe);
         if (!equipe) return 'Equipe não encontrada';
         const turma = this.turmas.find(t => t.id === equipe.idTurma);
@@ -241,7 +259,7 @@ class ArenaConnect {
     }
 
     listarPartidas() {
-        return this.partidas.map( partida => ({
+        return this.partidas.map(partida => ({
             partida,
             nomeEquipeA: this.#rotularEquipe(partida.idEquipeA),
             nomeEquipeB: this.#rotularEquipe(partida.idEquipeB)
@@ -263,24 +281,24 @@ class ArenaConnect {
         });
     }
 
-    dadosTurmas(){
-        return this.turmas.map( t => ({id: t.id , nome: t.nome}))
+    dadosTurmas() {
+        return this.turmas.map(t => ({ id: t.id, nome: t.nome }))
     }
 
     dadosDaTurma(idTurma) {
         const turma = this.buscarTurmaOuFalhar(idTurma);
-        return {id: turma.id , nome: turma.nome};
+        return { id: turma.id, nome: turma.nome };
     }
 
-    dadosEquipes(){
+    dadosEquipes() {
         return this.equipes.map(e => this.#dadosDaEquipe(e));
     }
 
-    dadosDaEquipe(idEquipe){
+    dadosDaEquipe(idEquipe) {
         return this.#dadosDaEquipe(this.buscarEquipeOuFalhar(idEquipe));
     }
 
-    #dadosDaEquipe(e){
+    #dadosDaEquipe(e) {
         return {
             id: e.id,
             turma: this.turmas
@@ -316,10 +334,14 @@ class ArenaConnect {
         const dados = {
             turmas: this.turmas.map(t => ({ id: t.id, nome: t.nome })),
             atletas: this.atletas.map(a => ({ id: a.id, nome: a.nome, idTurma: a.idTurma })),
-            arbitros: this.arbitros.map(a => ({ id: a.id, nome: a.nome,
-                numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia })),
-            equipes: this.equipes.map(e => ({ id: e.id, idTurma: e.idTurma, 
-                modalidade: e.modalidade, atletas: e.atletas })),
+            arbitros: this.arbitros.map(a => ({
+                id: a.id, nome: a.nome,
+                numeroCredencial: a.numeroCredencial, anosExperiencia: a.anosExperiencia
+            })),
+            equipes: this.equipes.map(e => ({
+                id: e.id, idTurma: e.idTurma,
+                modalidade: e.modalidade, atletas: e.atletas
+            })),
             partidas: this.partidas.map(p => ({
                 id: p.id, idEquipeA: p.idEquipeA, idEquipeB: p.idEquipeB, modalidade: p.modalidade,
                 golsA: p.placar.golsA, golsB: p.placar.golsB,
@@ -339,7 +361,7 @@ class ArenaConnect {
     // "crus" (sem os métodos da classe, sem os campos privados funcionando).
     // Por isso reconstruímos cada entidade chamando a CadastroFactory de novo,
     // com os dados lidos — exatamente como se o usuário tivesse digitado.
-    carregarEstado() {
+    carregarEstado(silencioso = false) {
         if (!fs.existsSync(ARQUIVO_DADOS)) {
             console.log('Nenhum estado salvo encontrado ainda — começando do zero.');
             return;
@@ -366,8 +388,10 @@ class ArenaConnect {
         this.idArbitroContador = dados.idArbitroContador;
         this.idEquipeContador = dados.idEquipeContador;
         this.idPartidaContador = dados.idPartidaContador;
-        console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), 
+        if (!silencioso) {
+            console.log(`✔ Estado carregado: ${this.turmas.length} turma(s), ${this.atletas.length} atleta(s), 
             ${this.equipes.length} equipe(s), ${this.partidas.length} partida(s).`);
+        }
     }
 
 }
