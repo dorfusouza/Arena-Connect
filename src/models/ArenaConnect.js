@@ -1,6 +1,3 @@
-const prompt = require('prompt-sync')();
-
-const Modalidade = require('./Modalidade');
 const CadastroFactory = require('./CadastroFactory');
 const { calcularClassificacao } = require('./Classificacao');
 const fs = require('fs');
@@ -95,6 +92,12 @@ class ArenaConnect {
         return equipe;
     }
 
+    buscarPartidaOuFalhar(idPartida) {
+        const partida = this.partidas.find(p => p.id === idPartida);
+        if (!partida) throw new Error(`Partida com ID ${idPartida} não existe.`);
+        return partida;
+    }
+
     adicionarAtleta(idT, nome) {
         const turma = this.buscarTurmaOuFalhar(idT);
         const novoAtleta = CadastroFactory.criarAtleta(this.idAtletaContador, nome, idT);
@@ -110,24 +113,35 @@ class ArenaConnect {
         }));
     }
 
-    adicionarArbitro() {
-        const nome = prompt("Nome do Árbitro: ");
-        const numeroCredencial = parseInt(prompt("Número de Credencial: "));
-        const anosExperiencia = parseInt(prompt("Anos de Experiência: "));
-        try {
-            const novoArbitro = CadastroFactory.criarArbitro(this.idArbitroContador, nome, numeroCredencial, anosExperiencia);
-            this.idArbitroContador++;
-            this.arbitros.push(novoArbitro);
-            console.log("✔ Árbitro registrado com sucesso!");
-        } catch (erro) {
-            console.log(`✖ Árbitro não registrado: ${erro.message}`);
+    // Só o nome muda: trocar a turma de um atleta que já está numa equipe
+    // quebraria a regra "o atleta é da turma da equipe" (ver vincularAtletaEquipe).
+    editarAtleta(idAtleta, novoNome) {
+        const atleta = this.buscarAtletaOuFalhar(idAtleta);
+        CadastroFactory.criarAtleta(atleta.id, novoNome, atleta.idTurma); // só valida
+        atleta.nome = novoNome;
+        return atleta;
+    }
+
+    removerAtleta(idAtleta) {
+        const atleta = this.buscarAtletaOuFalhar(idAtleta);
+        if (this.equipes.some(e => e.atletas.includes(idAtleta))) {
+            throw new Error(`${atleta.nome} ainda está numa equipe. Desvincule o atleta antes.`);
         }
+        this.atletas = this.atletas.filter(a => a.id !== atleta.id);
+        return atleta;
+    }
+
+    // Mesmo padrão de adicionarTurma: recebe os dados prontos e devolve o
+    // árbitro criado — quem pergunta no teclado é o ArbitroController.
+    adicionarArbitro(nome, numeroCredencial, anosExperiencia) {
+        const arbitro = CadastroFactory.criarArbitro(this.idArbitroContador, nome, numeroCredencial, anosExperiencia);
+        this.idArbitroContador++;
+        this.arbitros.push(arbitro);
+        return arbitro;
     }
 
     listarArbitros() {
-        console.log("\n=== LISTA DE ÁRBITROS ===");
-        if (this.arbitros.length === 0) return console.log("Nenhum árbitro no sistema.");
-        this.arbitros.forEach(a => a.exibir());
+        return this.arbitros;
     }
 
     // NOVO (Clean Code): verificação booleana extraída e nomeada — antes
@@ -136,28 +150,33 @@ class ArenaConnect {
         return this.equipes.some(e => e.idTurma === idTurma && e.modalidade === modalidade);
     }
 
-    adicionarEquipe() {
-        this.listarTurmas();
-        const idT = parseInt(prompt("ID da Turma: "));
-
-        try {
-            const turma = this.buscarTurmaOuFalhar(idT);
-
-            console.log("\nModalidades disponíveis:");
-            Object.values(Modalidade).forEach(m => console.log(`- ${m}`));
-            const modalidade = prompt("Modalidade (copie exatamente como está na lista acima): ");
-
-            if (this.equipeJaExiste(idT, modalidade)) {
-                throw new Error(`a turma ${turma.nome} já tem uma equipe em "${modalidade}".`);
-            }
-
-            const novaEquipe = CadastroFactory.criarEquipe(this.idEquipeContador, idT, modalidade);
-            this.idEquipeContador++;
-            this.equipes.push(novaEquipe);
-            console.log(`✔ Equipe registrada: ${turma.nome} em "${modalidade}"!`);
-        } catch (erro) {
-            console.log(`✖ Equipe não registrada: ${erro.message}`);
+    adicionarEquipe(idTurma, modalidade) {
+        const turma = this.buscarTurmaOuFalhar(idTurma);
+        if (this.equipeJaExiste(idTurma, modalidade)) {
+            throw new Error(`a turma ${turma.nome} já tem uma equipe em "${modalidade}".`);
         }
+        const equipe = CadastroFactory.criarEquipe(this.idEquipeContador, idTurma, modalidade);
+        this.idEquipeContador++;
+        this.equipes.push(equipe);
+        return { equipe, turma };
+    }
+
+    editarEquipe(idEquipe, novaModalidade) {
+        const equipe = this.buscarEquipeOuFalhar(idEquipe);
+        CadastroFactory.criarEquipe(equipe.id, equipe.idTurma, novaModalidade); // só valida
+        if (novaModalidade === equipe.modalidade) return equipe;
+        if (this.historicoDaEquipe(idEquipe).length > 0) {
+            throw new Error('a equipe já tem partidas registradas e não pode mudar de modalidade.');
+        }
+        if (this.equipeJaExiste(equipe.idTurma, novaModalidade)) {
+            throw new Error(`a turma já tem uma equipe em "${novaModalidade}".`);
+        }
+        equipe.modalidade = novaModalidade;
+        return equipe;
+    }
+
+    historicoDaEquipe(idEquipe) {
+        return this.partidas.filter(p => p.idEquipeA === idEquipe || p.idEquipeB === idEquipe);
     }
 
     listarEquipes() {
@@ -173,58 +192,36 @@ class ArenaConnect {
         });
     }
 
-    removerEquipe() {
-        this.listarEquipes();
-        const idE = parseInt(prompt("ID da Equipe a remover: "));
-
-        try {
-            const equipe = this.buscarEquipeOuFalhar(idE);
-            this.equipes = this.equipes.filter(e => e.id !== equipe.id);
-            console.log(`✔ Equipe removida. Os atletas continuam no sistema (total de atletas: ${this.atletas.length}).`);
-        } catch (erro) {
-            console.log(`✖ Não foi possível remover: ${erro.message}`);
+    removerEquipe(idEquipe) {
+        const equipe = this.buscarEquipeOuFalhar(idEquipe);
+        if (this.historicoDaEquipe(idEquipe).length > 0) {
+            throw new Error('a equipe já tem partidas registradas e não pode ser removida.');
         }
+        this.equipes = this.equipes.filter(e => e.id !== equipe.id);
+        return equipe;
     }
 
-    vincularAtletaEquipe() {
-        this.listarEquipes();
-        const idE = parseInt(prompt("ID da Equipe: "));
+    vincularAtletaEquipe(idEquipe, idAtleta) {
+        const equipe = this.buscarEquipeOuFalhar(idEquipe);
+        const atleta = this.buscarAtletaOuFalhar(idAtleta);
 
-        try {
-            const equipe = this.buscarEquipeOuFalhar(idE);
-
-            this.listarAtletas();
-            const idA = parseInt(prompt("ID do Atleta: "));
-            const atleta = this.buscarAtletaOuFalhar(idA);
-
-            if (atleta.idTurma !== equipe.idTurma) {
-                throw new Error(`${atleta.nome} não pertence à turma dessa equipe.`);
-            }
-            if (!equipe.adicionarAtleta(idA)) {
-                throw new Error(`${atleta.nome} já está nessa equipe.`);
-            }
-            console.log(`✔ ${atleta.nome} vinculado à equipe de "${equipe.modalidade}"!`);
-        } catch (erro) {
-            console.log(`✖ Não foi possível vincular: ${erro.message}`);
+        if (atleta.idTurma !== equipe.idTurma) {
+            throw new Error(`${atleta.nome} não pertence à turma dessa equipe.`);
         }
+        if (!equipe.adicionarAtleta(idAtleta)) {
+            throw new Error(`${atleta.nome} já está nessa equipe.`);
+        }
+        return { equipe, atleta };
     }
 
-    desvincularAtletaEquipe() {
-        this.listarEquipes();
-        const idE = parseInt(prompt("ID da Equipe: "));
+    desvincularAtletaEquipe(idEquipe, idAtleta) {
+        const equipe = this.buscarEquipeOuFalhar(idEquipe);
+        const atleta = this.buscarAtletaOuFalhar(idAtleta);
 
-        try {
-            const equipe = this.buscarEquipeOuFalhar(idE);
-            const idA = parseInt(prompt("ID do Atleta a remover da equipe: "));
-            const atleta = this.buscarAtletaOuFalhar(idA);
-
-            if (!equipe.removerAtleta(idA)) {
-                throw new Error(`${atleta.nome} não está nessa equipe.`);
-            }
-            console.log(`✔ ${atleta.nome} removido da equipe. Ele continua no sistema (total de atletas: ${this.atletas.length}).`);
-        } catch (erro) {
-            console.log(`✖ Não foi possível desvincular: ${erro.message}`);
+        if (!equipe.removerAtleta(idAtleta)) {
+            throw new Error(`${atleta.nome} não está nessa equipe.`);
         }
+        return { equipe, atleta };
     }
 
 
@@ -290,6 +287,32 @@ class ArenaConnect {
         return { id: turma.id, nome: turma.nome };
     }
 
+    dadosAtletas() {
+        return this.atletas.map(a => this.#dadosDoAtleta(a));
+    }
+
+    dadosDoAtleta(idAtleta) {
+        return this.#dadosDoAtleta(this.buscarAtletaOuFalhar(idAtleta));
+    }
+
+    #dadosDoAtleta(a) {
+        return {
+            id: a.id,
+            nome: a.nome,
+            idTurma: a.idTurma,
+            turma: this.turmas.find(t => t.id === a.idTurma)?.nome ?? 'Turma não encontrada',
+        };
+    }
+
+    dadosArbitros() {
+        return this.arbitros.map(a => ({
+            id: a.id,
+            nome: a.nome,
+            numeroCredencial: a.numeroCredencial,
+            anosExperiencia: a.anosExperiencia,
+        }));
+    }
+
     dadosEquipes() {
         return this.equipes.map(e => this.#dadosDaEquipe(e));
     }
@@ -303,6 +326,7 @@ class ArenaConnect {
             id: e.id,
             turma: this.turmas
                 .find(t => t.id === e.idTurma)?.nome ?? 'Turma não encontrada',
+            modalidade: e.modalidade,
             atletas: e.atletas
                 .map(idA => this.atletas.find(a => a.id === idA))
                 .filter(a => a)
@@ -311,14 +335,22 @@ class ArenaConnect {
     }
 
     dadosPartidas() {
-        return this.partidas.map(p => ({
+        return this.partidas.map(p => this.#dadosDaPartida(p));
+    }
+
+    dadosDaPartida(idPartida) {
+        return this.#dadosDaPartida(this.buscarPartidaOuFalhar(idPartida));
+    }
+
+    #dadosDaPartida(p) {
+        return {
             id: p.id,
             modalidade: p.modalidade,
             equipeA: this.#rotularEquipe(p.idEquipeA),
             equipeB: this.#rotularEquipe(p.idEquipeB),
             golsA: p.placar.golsA,
             golsB: p.placar.golsB,
-        }));
+        };
     }
 
     // NOVO (Persistência): grava TODO o estado do sistema em JSON. Fica no
@@ -363,7 +395,7 @@ class ArenaConnect {
     // com os dados lidos — exatamente como se o usuário tivesse digitado.
     carregarEstado(silencioso = false) {
         if (!fs.existsSync(ARQUIVO_DADOS)) {
-            console.log('Nenhum estado salvo encontrado ainda — começando do zero.');
+            if (!silencioso) console.log('Nenhum estado salvo encontrado ainda — começando do zero.');
             return;
         }
         const dados = JSON.parse(fs.readFileSync(ARQUIVO_DADOS, 'utf-8'));
